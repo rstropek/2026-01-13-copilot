@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 import uvicorn
 
-from .routers import demo, configure
+from .routers import demo
 
 app = FastAPI(title="Configurizer API")
 
