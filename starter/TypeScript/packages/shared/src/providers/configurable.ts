@@ -1,6 +1,65 @@
+/**
+ * Abstract base class for machines with configurable settings.
+ * 
+ * Provides validation and unit of measure conversion functionality for machine settings.
+ * Derived classes must implement the `settings` property to define their available settings.
+ * 
+ * @abstract
+ * @example
+ * ```typescript
+ * class CoffeeMachine extends ConfigurableMachine {
+ *   get settings(): Setting[] {
+ *     return [
+ *       {
+ *         namespace: 'coffee',
+ *         identifier: 'temperature',
+ *         description: 'Brewing temperature',
+ *         dataType: SettingType.NUMBER,
+ *         nullable: false,
+ *         defaultValue: 93,
+ *         uom: UnitOfMeasure.DEGREE_CELSIUS,
+ *         minValue: 85,
+ *         maxValue: 96
+ *       }
+ *     ];
+ *   }
+ * }
+ * ```
+ */
 export abstract class ConfigurableMachine {
+    /**
+     * Gets the array of setting definitions supported by this machine.
+     * 
+     * @abstract
+     * @returns {Setting[]} Array of setting metadata defining the configurable parameters for this machine
+     */
     abstract get settings(): Setting[];
 
+    /**
+     * Validates an array of setting values against the machine's setting definitions.
+     * 
+     * Performs comprehensive validation including:
+     * - Checking for duplicate identifiers
+     * - Verifying all identifiers exist in the machine's settings
+     * - Validating data types (string, number, boolean)
+     * - Enforcing nullable constraints
+     * - Checking min/max values for numeric settings
+     * - Validating and converting units of measure
+     * - Ensuring required settings are provided
+     * 
+     * @protected
+     * @param {SettingValue[]} settings - Array of setting values to validate
+     * @returns {SettingError[]} Array of validation errors. Empty array if all settings are valid.
+     * @example
+     * ```typescript
+     * const errors = this.verifySettings([
+     *   { identifier: 'temperature', value: 200, uom: UnitOfMeasure.DEGREE_FAHRENHEIT }
+     * ]);
+     * if (errors.length > 0) {
+     *   console.error('Validation errors:', errors);
+     * }
+     * ```
+     */
     protected verifySettings(settings: SettingValue[]): SettingError[] {
         const errors: SettingError[] = [];
         const seenIdentifiers = new Set<string>();
@@ -123,6 +182,29 @@ export abstract class ConfigurableMachine {
         return errors;
     }
 
+    /**
+     * Converts a numeric value from one unit of measure to another.
+     * 
+     * Supports conversions for:
+     * - Temperature: Celsius ↔ Fahrenheit
+     * - Pressure: Bar ↔ PSI
+     * - Rotation speed: RPM ↔ RPS
+     * - Time: Minutes ↔ Seconds
+     * 
+     * @protected
+     * @param {number} value - The numeric value to convert
+     * @param {UnitOfMeasure} fromUom - The source unit of measure
+     * @param {UnitOfMeasure} toUom - The target unit of measure
+     * @returns {number | null} The converted value, or null if conversion is not possible
+     * @example
+     * ```typescript
+     * const celsius = this.convertUom(212, UnitOfMeasure.DEGREE_FAHRENHEIT, UnitOfMeasure.DEGREE_CELSIUS);
+     * // Returns 100
+     * 
+     * const incompatible = this.convertUom(5, UnitOfMeasure.BAR, UnitOfMeasure.DEGREE_CELSIUS);
+     * // Returns null (incompatible units)
+     * ```
+     */
     protected convertUom(value: number, fromUom: UnitOfMeasure, toUom: UnitOfMeasure): number | null {
         // If UOMs are the same, no conversion needed
         if (fromUom === toUom) {
