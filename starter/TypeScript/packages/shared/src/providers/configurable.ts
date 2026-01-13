@@ -35,6 +35,8 @@ export abstract class ConfigurableMachine {
      */
     abstract get settings(): Setting[];
 
+    abstract applySettings(settings: SettingValue[]): SettingError[];
+
     /**
      * Validates an array of setting values against the machine's setting definitions.
      * 
@@ -272,13 +274,13 @@ type BaseSettingMetadata = {
   namespace: string;
   identifier: string;
   description: string;
-  nullable: boolean;
+  nullable?: boolean;
 };
 
 // String setting metadata
 type StringSettingMetadata = BaseSettingMetadata & {
   dataType: SettingType.STRING;
-  defaultValue: string | null;
+  defaultValue?: string | null;
 };
 
 // Number setting metadata with optional unit of measure and min/max values
