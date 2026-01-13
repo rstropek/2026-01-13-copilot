@@ -1,5 +1,19 @@
-// Setup a data model for configurable parameters for machines
+export abstract class ConfigurableMachine {
+    abstract get settings(): Setting[];
 
+    protected verifySettings(settings: SettingValue[]): SettingError[] {
+        // Perform the following checks:
+        // * Each identifier must exist in the machine's settings
+        // * No duplicate identifiers in settings
+        // * There must be a value for each non-nullable setting, or a default value must be provided
+        // * Value types must match the setting's data type
+        // * If numeric, check min/max values
+        // * If numeric, uom must fit
+        
+    }
+}
+
+// Setup a data model for configurable parameters for machines
 export enum SettingType {
   STRING = 'string',
   NUMBER = 'number',
