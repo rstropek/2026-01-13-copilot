@@ -1,0 +1,14 @@
+{   
+    "molder_1": {
+        "type": "InjectionMolder",
+        "config": {
+            "filePath": "/Users/rstropek/github/Samples/KI/Configurizer/TypeScript/configurations/molder_1.json"
+        }
+    },
+    "molder_2": {
+        "type": "InjectionMolder",
+        "config": {
+            "filePath": "/Users/rstropek/github/Samples/KI/Configurizer/TypeScript/configurations/molder_2.json"
+        }
+    }
+}

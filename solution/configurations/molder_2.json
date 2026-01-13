@@ -1,0 +1,33 @@
+[
+  {
+    "identifier": "materialName",
+    "value": "PP"
+  },
+  {
+    "identifier": "guardsClosedRequired",
+    "value": true
+  },
+  {
+    "identifier": "barrelTemperature",
+    "value": 230,
+    "uom": "°C"
+  },
+  {
+    "identifier": "moldTemperature",
+    "value": 60,
+    "uom": "°C"
+  },
+  {
+    "identifier": "injectionPressure",
+    "value": 1200,
+    "uom": "bar"
+  },
+  {
+    "identifier": "screwSpeed",
+    "value": 80,
+    "uom": "rpm"
+  },
+  {
+    "identifier": "coolingTime"
+  }
+]

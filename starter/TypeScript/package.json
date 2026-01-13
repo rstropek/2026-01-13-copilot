@@ -1,0 +1,17 @@
+{
+    "name": "configurizer",
+    "private": true,
+    "workspaces": [
+        "packages/*"
+    ],
+    "devDependencies": {
+        "@types/node": "^25.0.6",
+        "typescript": "^5.9.3"
+    },
+    "scripts": {
+        "build": "npm run build --workspaces --if-present",
+        "test": "npm run test --workspaces --if-present",
+        "start": "npm run build && npm run -w packages/server start",
+        "start:client": "npm run build && npm run -w packages/client start"
+    }
+}
