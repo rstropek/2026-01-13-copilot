@@ -49,3 +49,13 @@ type BooleanSettingMetadata = BaseSettingMetadata & {
 // Union type for all setting metadata types
 export type Setting = StringSettingMetadata | NumberSettingMetadata | BooleanSettingMetadata;
 
+export type SettingValue = {
+    identifier: string; // Must be globally unique
+    value: string | number | boolean | null;
+    uom?: UnitOfMeasure;
+}
+
+export type SettingError = {
+    identifier: string; // Must be globally unique
+    message: string;
+}
