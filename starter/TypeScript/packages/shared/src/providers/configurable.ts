@@ -65,9 +65,31 @@ export abstract class ConfigurableMachine {
             // For numeric settings, check min/max and uom
             if (metadata.dataType === SettingType.NUMBER && valueType === 'number') {
                 const numMetadata = metadata as NumberSettingMetadata;
-                const numValue = settingValue.value as number;
+                let numValue = settingValue.value as number;
 
-                // Check min value
+                // Handle UOM conversion if metadata specifies a UOM
+                if (numMetadata.uom !== undefined) {
+                    if (!settingValue.uom) {
+                        errors.push({
+                            identifier: settingValue.identifier,
+                            message: `Unit of measure is required, expected ${numMetadata.uom}`
+                        });
+                        continue;
+                    }
+
+                    // Attempt UOM conversion
+                    const convertedValue = this.convertUom(numValue, settingValue.uom, numMetadata.uom);
+                    if (convertedValue === null) {
+                        errors.push({
+                            identifier: settingValue.identifier,
+                            message: `Cannot convert from ${settingValue.uom} to ${numMetadata.uom}`
+                        });
+                        continue;
+                    }
+                    numValue = convertedValue;
+                }
+
+                // Check min value (after conversion)
                 if (numMetadata.minValue !== undefined && numValue < numMetadata.minValue) {
                     errors.push({
                         identifier: settingValue.identifier,
@@ -75,22 +97,12 @@ export abstract class ConfigurableMachine {
                     });
                 }
 
-                // Check max value
+                // Check max value (after conversion)
                 if (numMetadata.maxValue !== undefined && numValue > numMetadata.maxValue) {
                     errors.push({
                         identifier: settingValue.identifier,
                         message: `Value ${numValue} exceeds maximum ${numMetadata.maxValue}`
                     });
-                }
-
-                // Check uom if metadata specifies one
-                if (numMetadata.uom !== undefined) {
-                    if (settingValue.uom !== numMetadata.uom) {
-                        errors.push({
-                            identifier: settingValue.identifier,
-                            message: `Unit of measure must be ${numMetadata.uom}, got ${settingValue.uom || 'none'}`
-                        });
-                    }
                 }
             }
         }
@@ -110,6 +122,49 @@ export abstract class ConfigurableMachine {
 
         return errors;
     }
+
+    protected convertUom(value: number, fromUom: UnitOfMeasure, toUom: UnitOfMeasure): number | null {
+        // If UOMs are the same, no conversion needed
+        if (fromUom === toUom) {
+            return value;
+        }
+
+        // Temperature conversions
+        if (fromUom === UnitOfMeasure.DEGREE_CELSIUS && toUom === UnitOfMeasure.DEGREE_FAHRENHEIT) {
+            return (value * 9 / 5) + 32;
+        }
+        if (fromUom === UnitOfMeasure.DEGREE_FAHRENHEIT && toUom === UnitOfMeasure.DEGREE_CELSIUS) {
+            return (value - 32) * 5 / 9;
+        }
+
+        // Pressure conversions
+        if (fromUom === UnitOfMeasure.BAR && toUom === UnitOfMeasure.PSI) {
+            return value * 14.5038;
+        }
+        if (fromUom === UnitOfMeasure.PSI && toUom === UnitOfMeasure.BAR) {
+            return value / 14.5038;
+        }
+
+        // Rotation speed conversions
+        if (fromUom === UnitOfMeasure.RPM && toUom === UnitOfMeasure.RPS) {
+            return value / 60;
+        }
+        if (fromUom === UnitOfMeasure.RPS && toUom === UnitOfMeasure.RPM) {
+            return value * 60;
+        }
+
+        // Time conversions
+        if (fromUom === UnitOfMeasure.MINUTES && toUom === UnitOfMeasure.SECONDS) {
+            return value * 60;
+        }
+        if (fromUom === UnitOfMeasure.SECONDS && toUom === UnitOfMeasure.MINUTES) {
+            return value / 60;
+        }
+
+        // Incompatible UOMs
+        return null;
+    }
+    
 }
 
 // Setup a data model for configurable parameters for machines

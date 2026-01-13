@@ -142,13 +142,13 @@ describe('verifySettings', () => {
     expect(errors.some(e => e.identifier === 'temp' && e.message.includes('exceeds maximum'))).toBe(true);
   });
 
-  it('should detect incorrect unit of measure', () => {
+  it('should successfully convert Fahrenheit to Celsius', () => {
     const machine = new TestMachine();
     const errors = machine['verifySettings']([
-      { identifier: 'temp', value: 50, uom: UnitOfMeasure.DEGREE_FAHRENHEIT }
+      { identifier: 'temp', value: 122, uom: UnitOfMeasure.DEGREE_FAHRENHEIT } // 122°F = 50°C
     ]);
     
-    expect(errors.some(e => e.identifier === 'temp' && e.message.includes('Unit of measure must be'))).toBe(true);
+    expect(errors).toHaveLength(0);
   });
 
   it('should detect missing unit of measure', () => {
@@ -157,6 +157,96 @@ describe('verifySettings', () => {
       { identifier: 'temp', value: 50 }
     ]);
     
-    expect(errors.some(e => e.identifier === 'temp' && e.message.includes('Unit of measure must be'))).toBe(true);
+    expect(errors.some(e => e.identifier === 'temp' && e.message.includes('Unit of measure is required'))).toBe(true);
+  });
+  it('should detect incompatible unit of measure conversion', () => {
+    const machine = new TestMachine();
+    const errors = machine['verifySettings']([
+      { identifier: 'temp', value: 50, uom: UnitOfMeasure.RPM } // Cannot convert RPM to Celsius
+    ]);
+    
+    expect(errors.some(e => e.identifier === 'temp' && e.message.includes('Cannot convert from'))).toBe(true);
+  });
+
+  it('should validate min/max after UOM conversion', () => {
+    const machine = new TestMachine();
+    // 212°F = 100°C, which is at the maximum (0-100°C)
+    const errorsAtMax = machine['verifySettings']([
+      { identifier: 'temp', value: 212, uom: UnitOfMeasure.DEGREE_FAHRENHEIT }
+    ]);
+    expect(errorsAtMax).toHaveLength(0);
+
+    // 213°F > 100°C, should exceed maximum
+    const errorsAboveMax = machine['verifySettings']([
+      { identifier: 'temp', value: 213, uom: UnitOfMeasure.DEGREE_FAHRENHEIT }
+    ]);
+    expect(errorsAboveMax.some(e => e.identifier === 'temp' && e.message.includes('exceeds maximum'))).toBe(true);
+
+    // 32°F = 0°C, which is at the minimum
+    const errorsAtMin = machine['verifySettings']([
+      { identifier: 'temp', value: 32, uom: UnitOfMeasure.DEGREE_FAHRENHEIT }
+    ]);
+    expect(errorsAtMin).toHaveLength(0);
+
+    // 31°F < 0°C, should be below minimum
+    const errorsBelowMin = machine['verifySettings']([
+      { identifier: 'temp', value: 31, uom: UnitOfMeasure.DEGREE_FAHRENHEIT }
+    ]);
+    expect(errorsBelowMin.some(e => e.identifier === 'temp' && e.message.includes('below minimum'))).toBe(true);
   });
 });
+
+describe('convertUom', () => {
+  const machine = new TestMachine();
+
+  it('should return same value for identical UOMs', () => {
+    expect(machine['convertUom'](50, UnitOfMeasure.DEGREE_CELSIUS, UnitOfMeasure.DEGREE_CELSIUS)).toBe(50);
+    expect(machine['convertUom'](100, UnitOfMeasure.RPM, UnitOfMeasure.RPM)).toBe(100);
+  });
+
+  it('should convert temperature correctly', () => {
+    // Celsius to Fahrenheit
+    expect(machine['convertUom'](0, UnitOfMeasure.DEGREE_CELSIUS, UnitOfMeasure.DEGREE_FAHRENHEIT)).toBe(32);
+    expect(machine['convertUom'](100, UnitOfMeasure.DEGREE_CELSIUS, UnitOfMeasure.DEGREE_FAHRENHEIT)).toBe(212);
+    
+    // Fahrenheit to Celsius
+    expect(machine['convertUom'](32, UnitOfMeasure.DEGREE_FAHRENHEIT, UnitOfMeasure.DEGREE_CELSIUS)).toBe(0);
+    expect(machine['convertUom'](212, UnitOfMeasure.DEGREE_FAHRENHEIT, UnitOfMeasure.DEGREE_CELSIUS)).toBe(100);
+  });
+
+  it('should convert pressure correctly', () => {
+    // Bar to PSI
+    const barToPsi = machine['convertUom'](1, UnitOfMeasure.BAR, UnitOfMeasure.PSI);
+    expect(barToPsi).toBeCloseTo(14.5038, 4);
+    
+    // PSI to Bar
+    const psiToBar = machine['convertUom'](14.5038, UnitOfMeasure.PSI, UnitOfMeasure.BAR);
+    expect(psiToBar).toBeCloseTo(1, 4);
+  });
+
+  it('should convert rotation speed correctly', () => {
+    // RPM to RPS
+    expect(machine['convertUom'](60, UnitOfMeasure.RPM, UnitOfMeasure.RPS)).toBe(1);
+    expect(machine['convertUom'](120, UnitOfMeasure.RPM, UnitOfMeasure.RPS)).toBe(2);
+    
+    // RPS to RPM
+    expect(machine['convertUom'](1, UnitOfMeasure.RPS, UnitOfMeasure.RPM)).toBe(60);
+    expect(machine['convertUom'](2, UnitOfMeasure.RPS, UnitOfMeasure.RPM)).toBe(120);
+  });
+
+  it('should convert time correctly', () => {
+    // Minutes to Seconds
+    expect(machine['convertUom'](1, UnitOfMeasure.MINUTES, UnitOfMeasure.SECONDS)).toBe(60);
+    expect(machine['convertUom'](2, UnitOfMeasure.MINUTES, UnitOfMeasure.SECONDS)).toBe(120);
+    
+    // Seconds to Minutes
+    expect(machine['convertUom'](60, UnitOfMeasure.SECONDS, UnitOfMeasure.MINUTES)).toBe(1);
+    expect(machine['convertUom'](120, UnitOfMeasure.SECONDS, UnitOfMeasure.MINUTES)).toBe(2);
+  });
+
+  it('should return null for incompatible conversions', () => {
+    expect(machine['convertUom'](50, UnitOfMeasure.DEGREE_CELSIUS, UnitOfMeasure.RPM)).toBeNull();
+    expect(machine['convertUom'](100, UnitOfMeasure.BAR, UnitOfMeasure.SECONDS)).toBeNull();
+    expect(machine['convertUom'](60, UnitOfMeasure.RPM, UnitOfMeasure.DEGREE_FAHRENHEIT)).toBeNull();
+    expect(machine['convertUom'](30, UnitOfMeasure.MINUTES, UnitOfMeasure.PSI)).toBeNull();
+  });});
